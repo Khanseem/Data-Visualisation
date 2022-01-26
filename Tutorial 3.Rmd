@@ -1,0 +1,48 @@
+---
+title: " Tutorial 3 DSA2101"
+author: "Waseem"
+date: "11/10/2021"
+output: pdf_document
+---
+
+```{r echo = TRUE}
+
+library(jsonlite)
+library(tidyverse)
+#qn 1 
+```
+1. Ensure that the date column is of class Date, and then add a column named num_arrivals with the number of arrivals per day.
+```{r echo = TRUE}
+er_json <- fromJSON("data/er_arrivals.json")
+num_arrivals <- vapply(er_json$times,length,2L)
+er_json$date<-as.Date(er_json$date,format="%Y-%m-%d")
+er_json<-cbind(er_json,num_arrivals)
+
+full_seq <- seq(as.Date("1963-02-01"),as.Date("1964-03-31"),by="1 day")
+date<-full_seq[which(!(full_seq%in%er_json$date))]
+times<-rep("NA",times=231)
+num_arrivals<-rep(0,times=231)
+empty_df<-data.frame(date,times,num_arrivals)
+new_er_json <-rbind(er_json,empty_df)
+new_er_json<-arrange(new_er_json, date)
+
+```
+2. Add rows to your data, containing the missing days, with NA’s in the times column, and 0’s in the num_arrivals column. 
+```{r echo = TRUE}
+#qn 2
+N<-425
+Yk<-new_er_json$num_arrivals
+Xk<-table(Yk)
+Xk<-as.vector(Xk)
+k<-0:4
+```
+
+3. Use the ER data to create the Poisson-ness plot for this dataset. 
+
+```{r echo=TRUE}
+phi<- lfactorial(k) + log(Xk/N)
+plot(x=k,y=phi)
+lm_out<-(lm(phi~k))
+coefs<-coef(lm_out)
+abline(a=coefs[1],b=coefs[2],lty=2)
+```
