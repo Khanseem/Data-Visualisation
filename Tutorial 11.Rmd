@@ -1,0 +1,59 @@
+---
+title: " Tutorial 11 DSA2101pdf isit"
+author: "Waseem"
+date: "11/10/2021"
+output: pdf_document
+---
+
+```{r echo = FALSE}
+library(tidyverse)
+library(knitr)
+library(ggplot2)
+library(stringr)
+
+artist_info <- read_csv("data/artist_data.csv")%>%as_tibble()
+artist_work <- read_csv("data/artwork_data.csv")%>%as_tibble()%>%filter(artistId != 558)
+
+temp<- which(str_detect(artist_work$year, "[^0-9] "))
+artist_work$year[temp[1:18]]<-""
+artist_work$year[temp[19]]<-"1998"
+```
+
+5. How is gender distribution over centuries in different country?
+Proportion of females increase over centuries in the countries United States, United Kingdom , Nederland and Deutschland, but decreases in France. 
+
+```{r echo = FALSE}
+
+artist_gender <- artist_work %>% left_join(artist_info, by=c("artistId" = "id")) %>% 
+  mutate(century = acquisitionYear %/% 100 + 1)  %>% 
+  filter(!is.na(year), !is.na(gender),!is.na(century),!is.na(placeOfBirth))%>%
+  select(artist,gender,placeOfBirth,century)%>%
+  mutate(Country=sub('.*,\\s*','\\1',placeOfBirth))%>%
+  distinct()%>%
+  filter(Country==c("United Kingdom","France","Deutschland","United States","Nederland"))
+
+
+ggplot(data = artist_gender, aes(y=Country, fill = gender)) +
+  geom_bar(position="fill") +
+  facet_wrap(~century)+
+  labs(title = "Gender Distribution over centuries in different Countries", fill = "Gender",x="Proportion of females to males",y="Country") +
+  theme(axis.text.y=element_text(size=10))
+
+```
+
+8. Over the years and centuries, has the gender proportion in artwork changed?
+As seen in the graph below, the proportion of females to males has increased over the years , especially since the 19th century.
+
+
+```{r echo = FALSE}
+artist_prop <- artist_work %>% left_join(artist_info, by=c("artistId" = "id")) %>% 
+  filter(!is.na(year), !is.na(gender)) %>% 
+  mutate(century = acquisitionYear %/% 100 + 1) 
+
+ggplot(artist_prop)+
+  geom_bar(position="fill", aes(x=year,fill=gender))+
+  labs(y="Proportion of Female to Male",x="Year",fill="Gender",title="Change in Gender Proportion in artwork over the years")+
+scale_x_discrete(breaks=seq(1500,2015,50))
+
+
+```
