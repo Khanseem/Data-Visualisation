@@ -1,0 +1,99 @@
+---
+title: "Tutorial 5 Worksheet AY 21/22 Sem 1"
+output: 
+  pdf_document: default
+---
+Read your data into R as absent and identify the number of couriers in the dataset.
+``` {r echo = TRUE}
+library(readr)
+library(tidyverse)
+absent <- read_delim("data/Absenteeism_at_work.csv")
+absent_count<-select(absent,ID) %>% 
+   unique() %>% 
+   count()
+absent_count
+```
+1.There are 36 couriers in the dataset.
+
+2.Max absences
+Obtain the longest 7 absences (with ties equals TRUE). Keep only the courier ID, reason for absence and the Absenteeism time. Make a mental note of the couriers you observe.
+Courier IDs-14,36,9,28,9,11,36
+```{r echo=TRUE}
+max_absence_tbl<-select (absent , "ID", "Reason for absence" , "Absenteeism time in hours" )
+max_absence_tbl<-slice_max(max_absence_tbl,order_by=max_absence_tbl$`Absenteeism time in hours`,n=7)
+max_absence_tbl
+```
+
+Unknown reason for absence
+
+Extract the rows corresponding to reason for absence equals to 0. Keep only the ID, reason for absence, discipline record and absenteeism time. What do you observe?
+Courier IDs of first 10 - 36,20,28,11,26,13,36,2,7,18.
+Courier 36,28,11, were in the list of the longest 7 absences, and also have corresponding readon for absence equals to 0. Maybe there is a correlation. 
+```{r echo=TRUE}
+reason_tbl<-select(absent, "ID","Reason for absence","Disciplinary failure","Absenteeism time in hours")
+reason_tbl<-filter(reason_tbl, reason_tbl$`Reason for absence`==0)
+reason_tbl
+
+```
+Remove disciplinary failure
+Remove the rows corresponding to disciplinary failure equals to 1.
+```{r echo=TRUE}
+absent <- filter(absent, absent$`Disciplinary failure` !=1)
+absent
+```
+Recode day of week and season
+Recode the columns Day.of.the.week and Seasons to the character values given above. Here are some example rows and columns.
+```{r echo=TRUE}
+absent$`Day of the week`<-recode(absent$`Day of the week`, '2'="Mon","3"="Tue","4"="Wed","5"="Thu","6"="Fri")
+absent$Seasons<-recode(absent$Seasons, "1"="Summer","2"="Autumn","3"="Winter","4"="Spring")
+absent
+```
+Proportion of absences in Day by Season
+Create a tibble that shows the proportion of absences in each season that occur on each weekday. Here are some of the rows in my dataset:
+A tibble named absence_props show- ing the proportion of absences that took place on a particular weekday within a season.
+
+```{r echo=TRUE}
+
+absence_props<-absent %>%
+   group_by(Seasons,`Day of the week`) %>%
+   count() %>%
+   group_by(Seasons) %>%
+   mutate(prop= n/sum(n)) %>% 
+   ungroup()
+absence_props
+```
+Summaries by courier
+For each courier, compute the following summary statistics: min, max, median, lower quartile, upper quartile, total absence time and total number of absences. Who are the most dilligent couriers? Who are the least?
+
+Couriers 4 and 35 are the most diligent as they have only been absent once, whereas Couriers 3 and 38 have been absent for 113 and 77 times respectively. 
+```{r echo=TRUE}
+statistic<- function(x){
+   q_df<-as.data.frame(t(quantile(x)))
+   colnames(q_df)<-c ("min","lower","median","upper","max")
+   q_df$abs_time <- sum(x)
+   q_df$abs_count<- length(x)
+   q_df
+}
+courier_summary<- absent %>% group_by(ID) %>% 
+   summarise(statistic(`Absenteeism time in hours`),.groups="drop")
+courier_summary
+
+```
+Status Changes
+The following demographic variables could have changed over the three years for which the couriers were tracked: Education to Pet status (five columns).
+Use dplyr to investigate which of the couriers’ status changed over the three years.
+
+Since there are no rows from the code run below, the couriers status have not changed over the three years. 
+```{r echo =TRUE}
+helper<-function(x){
+   change <- length(unique(x)) !=1
+   change
+}
+absent %>% 
+   group_by(ID) %>%
+   summarise(across(.cols=c(Education:Pet,`Body mass index`),helper)) %>%
+   ungroup() %>%
+   rowwise() %>%
+   mutate(any_change=any(c_across(-1))) %>% 
+   filter(any_change)
+```
