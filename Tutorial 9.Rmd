@@ -1,0 +1,45 @@
+---
+title: "Tutorial 9 Worksheet AY 21/22 Sem 1"
+output: 
+  pdf_document: default
+---
+Covid case count
+``` {r echo = FALSE}
+library(ggplot2)
+library(tidyverse)
+covid_sg <- read_csv("data/covid_sg.csv")%>%as_tibble()
+covid_sg<- covid_sg%>%
+  pivot_longer(!Date,names_to="Cases",values_to="Count")%>%
+  mutate(Date= as.Date(Date,format="%d/%m/%Y")) 
+
+ggplot(covid_sg,aes(fill=Cases,y=Count,x=Date))+
+  geom_bar(position="stack",stat="identity")+
+  labs ( x="Press Release Date",y="No. of Cases")+
+  ggtitle("Summary of Local Covid-19 Situation", subtitle = "Number of Community Linked and Unlinked Cases")+
+  theme(plot.title = element_text(hjust = 0.5),plot.subtitle = element_text(hjust=0.5))+
+  theme(axis.text.x=element_text(angle=90,vjust=0.5,hjust=1))+
+  geom_text(aes(label=Count), vjust=-0.3, color="black", size=3.5)+
+  geom_text(aes(label = stat(y), group = Date), stat = 'summary', fun = sum, vjust = -0.2)+
+  theme(legend.position="bottom",legend.title=element_blank())+
+scale_fill_manual(values=c("darkgreen", "steelblue1", "orange"),breaks=c("Quarantined", "Surveillance", "Unlinked"), labels=c("Local Linked and Already Quarantined", "Local Linked and Detected through Surveillance", "Local Unlinked"))
+  
+
+```
+Covid case deaths
+```{r echo=FALSE}
+covid_world_today <- read_csv("data/covid_world_today.csv")%>%as_tibble
+covid_world_today<-covid_world_today
+
+covid_world_today
+ggplot(covid_world_today) +
+  labs(y="Total Deaths",x="Total Cases")+
+  ylim(0,1e+06)+
+   xlim(0,1e+08)+
+facet_wrap(~continent)+
+  geom_point(aes(x=total_cases,y=total_deaths,colour=continent),alpha=0.4) +
+  scale_x_continuous(trans="log10")+
+    scale_y_continuous(trans="log10")+ 
+geom_smooth(outlier.shape = NA, aes(x=total_cases,y=total_deaths),method="lm",se=FALSE,linetype = 2,color="black",size=0.5)
+
+```   
+
