@@ -1,0 +1,94 @@
+---
+title: " Tutorial 7"
+author: "Waseem"
+date: "11/4/2021"
+output: pdf_document
+---
+
+```{r setup, include=TRUE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+1. Compute the Happiness Score for each individual.
+```{r echo=TRUE}
+library(tidyverse)
+library(readxl)
+library(survey)
+library(dplyr)
+library(ggplot2)
+happiness<- read_excel("data/happ_svy_data.xlsx")%>%as_tibble()
+happiness_score_R<-happiness%>%
+  select(c(1,5,6,10,13,14,19,23,24,25,27,28,29))%>%
+  mutate(across(starts_with("Q1") , ~recode(.,"Strongly disagree"=6L,"Moderately disagree"=5L,"Slightly disagree"=4L,"Slightly agree"=3L,"Moderately agree"=2L,"Strongly agree"=1L)))
+happiness_score<-happiness%>%
+  select(!c(1,5,6,10,13,14,19,23,24,25,27,28,29))%>%
+  mutate(across(starts_with("Q1") , ~recode(.,"Strongly disagree"=1L,"Moderately disagree"=2L,"Slightly disagree"=3L,"Slightly agree"=4L,"Moderately agree"=5L,"Strongly agree"=6L)))%>%
+  cbind(happiness_score_R)%>%
+  mutate(happy = rowSums(across((starts_with("Q1"))))/29)
+happiness_score$ID <- seq.int(nrow(happiness_score))
+head(happiness_score%>%select(ID,happy,Q2,Q3))
+```
+
+2. Correct for non-response. Summarise the overall happiness score of our class. 
+
+Mean of happiness in class is 3.6419,meaning that on average, people are  neither happy nor unhappy, according to the Oxford Questionnaire.
+```{r echo=TRUE}
+happiness_score<-happiness_score%>%
+  filter(!is.na(Q2),!is.na(Q3))
+students <- happiness_score %>%
+  select(ID,happy,gender)%>%
+  mutate(fpc = 100)
+des1 <- svydesign(id=~ID, data=students, fpc = ~fpc)
+pop.gender <- count(students,gender)
+svymean(~happy, design=des1)
+des1.raked <- rake(des1, sample=list(~gender), population=list(pop.gender)) 
+svymean(~happy, design=des1.raked)
+
+```
+
+
+3. Present 2 plots based on the data, along with your explanations/comments.
+
+Some interestings things we could explore is how the Nationality and the gender of the students affects their happiness levels.
+The first plot depicts a boxplot of the happiness of foreigners and locals and their gender. Several hypotheses could be drawn from this plot. 
+
+Firstly, females are generally happier than males, as seen from the female boxplots being higher than the males. This could be due to females being more emotionally expressive, leading to them handling their emotions better than males. More information needs to be obtained to form any solid conclusion, like how often students express their emotions and how they deal with their emotions. 
+
+Secondly, among both males and females, foreigners are happier than locals. This could be due to them experiencing and enjoying things new to them, while locals are experiencing the same old culture and environment as they have been their whole life. Another  interesting observation is that, the spread of happiness from the mean is alot smaller for male foreigners compared to female foreigners. Data on what things make them happy could be used to illustrate the differences between foreigners and locals and perhaps help us be more appreciative of our own culture. 
+
+```{r echo=TRUE}
+happyplot<-cbind(students,happiness_score$Q2)%>%
+  cbind(happiness_score$Q3)%>%
+  rename(Nationality= `happiness_score$Q2` )%>%
+  rename(Residence=`happiness_score$Q3`)
+ggplot(happyplot)+
+  stat_boxplot(aes(y=happy,x=gender,fill=Nationality))+
+  labs(title="Difference in Happiness among Gender and Nationality of students  ", y="Happiness Score",x="Students according to Gender and Nationality ")
+```
+  
+The second plot depicts the spread of happiness levels amongst the students, with fill showing the number of residents who stay on campus. Referring to the oxford questionnaire, most people are not particularly happy or unhappy; the mean is 3-4. 
+A 3rd hypothesis can be drawn from this graph; the spread of happiness from the mean of 3-4 is wider for students who stay on campus compared to those who stay off campus. Perhaps this could be due to that people who stay on campus are exposed to more social interactions and commitments and this would dictate their lifestyle to a certain extent, which can polarize their happiness or unhappiness, while those who stay off campus have more freedom over their lifestyle and therefore do not have as much of a reason to be extremely unhappy or happy. Data showing hobbies and lifestyles ie number of hours spent studying , doing misc activities, could be used to derive further conclusions.
+
+```{r echo=TRUE}
+round_happyplot <- happyplot%>%as_tibble()%>%
+  mutate(happy=floor(happy))
+  round_happyplot$happy<-recode(round_happyplot$happy, '1'="1-2","2"="2-3","3"="3-4","4"="4-5","5"="5-6")
+ggplot(round_happyplot,aes(x=happy,fill=gender))+
+  geom_bar(position="stack", colour = "black")+
+  facet_wrap(~Residence)+
+  labs(title="Distribution of Happiness among students",x="Happiness Score",y="Number of students")
+```
+
+4. Analysis:
+• Outlier responses
+
+Observing the first plot, we can notice that a female foreigner has significantly low happiness levels. Upon referring to the data, Respondent ID 5 has a happiness level of 1.55 and is an outlier. This female foreigner is probably unhappy and hopefully she gets the help she needs or takes the Depression Symptoms test CES‐D Questionnaire to help her understand her unhappiness and feel happier. 
+
+```{r echo=TRUE}
+outlier_responses<-happiness_score%>%
+  arrange(happy)%>%
+  select(happy,ID)
+head(outlier_responses)
+```
+
+• Clusters within the class 
+There were 3 variables that could be used for hierarchical clustering , gender, nationality and residence. By plotting graphs to compare these variables, several hypotheses and conclusions could be drawn from the data above. However, there are some limitations in the plotting of these graphs. The size of locals and foreigners were different, so the results are skewed such that differences in the two groups may be more apparent in one compared to the other due to small sample size. In my opinion, happiness is very subjective and can only be quantified to a certain extent with numbers. A better representation of happiness would require more details such as what makes them happy, how do they deal with their emotions, etc and can be put into a wordcloud similar to that in tutorial 11. 
