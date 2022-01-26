@@ -1,0 +1,111 @@
+---
+title: " Tutorial 6"
+author: "Waseem"
+date: "10/3/2021"
+output: pdf_document
+---
+```{r setup, include=FALSE, message=FALSE, warn=FALSE}
+library(tidyverse)
+library(readxl)
+artist_info<- read.csv("data/artist_data.csv")%>% as_tibble()
+artist_work<- read.csv("data/artwork_data.csv")%>% as_tibble()
+```
+The files artist_data.csv and artwork_data.csv contain information on approximately 70,000 artworks in the Tate museum in Britain. The dataset comes from this repository:
+  https://github.com/tategallery/collection
+Use read.csv() to read the two tables into R as artist_info and artist_work. If you use read_csv(), the columns will be converted automatically, discarding some data in the process. Note that the two tables can be joined by the id and artistId columns.
+Convert to numeric
+In artist_work, the year column corresponds to the year in which the artwork was created. Convert this to a numeric column with the same name. What warnings did you observe? How did you deal with them?
+
+#"NAs introduced by coercion" warning was observed. changed no year to spaces 
+```{r echo=TRUE}
+temp<- which(str_detect(artist_work$year, "[^0-9] "))
+artist_work$year[temp[1:18]]<-""
+artist_work$year[temp[19]]<-"1998"
+
+artist_work<-mutate(artist_work,year= as.numeric(year))
+
+```
+Place of Birth
+The placeOfBirth column in artist_info is typically of the format “city, birth_area”, or “birth_area”. However, the birth_area uses the old name for the country. Use the table in artists_nation.xlsx to create a new column with the modern name for the nation in which the artist was born.
+Clue: You can use separate() here. 
+
+```{r place_birth, echo=TRUE}
+artist_info <- separate(artist_info, placeOfBirth, into=c(NA, "country"),
+                        sep=",",extra="merge",fill="left",remove=FALSE)
+manual_ids<-which(str_detect(artist_info$country,","))
+artist_info$country[manual_ids]<-c("France","Columbia","Israel","Israel","Hrvatska","Colombia")
+artist_nation<-read_excel("data/artists_nation.xlsx")
+artist_info<-left_join(artist_info, artist_nation,by=c("country"="birth_area"))
+artist_info
+```
+
+No information
+Retrieve the unique artist and artistId columns for the works of art for which the Tate Museum does not have information regarding the artist.
+```{r echo=TRUE}
+no_info<- anti_join(artist_work, artist_info, by= c("artistId"="id"))%>%
+select("artist", "artistId") %>%
+unique() 
+no_info
+
+```
+Remove an Artist Outlier
+Identify the artist with the most number of artworks, and remove him/her from the artist_works tibble.
+```{r echo=TRUE}
+artist_work%>% group_by(artistId)
+artist_work <- filter(artist_work, artistId != 558)
+```
+Gender counts By Century
+Use the acquisitionYear column in the artist_work table to com- pute the century in which the artwork was acquired by the Museum.
+By joining with the artist_info table, recreate the following ta- ble. The artworks with missing or NA gender, and the artworks with missing acquisition year were removed prior to creating the table.
+
+```{r gender_century, echo=TRUE}
+library(knitr)
+artist_work %>% left_join(artist_info,by= c("artistId"="id")) %>%
+filter(!is.na(gender),!is.na(acquisitionYear),gender!="")%>% 
+mutate(century= acquisitionYear%/% 100 + 1)%>%
+group_by(century,gender) %>% 
+count() %>% 
+  pivot_wider(id_cols= "gender",names_from="century",values_from="n")%>%
+  kable(col.names=c("","19th C.","20th C.","21th C."))
+
+```
+
+What does the code below do? Install the packages you need and look up the help pages if you need to.
+The code takes a list of words, splits them into separate words, then converts it all to lowercase. It then removes words that are common occurences with stopwords,then prints out the words, with their sizes according to the count. 
+
+library(wordcloud)
+library(tm)
+wordcloud(ww, vv, scale=c(1.5,.3), min.freq = 30) workswatercolour
+Include a paragraph on markdown text to explain the code briefly.
+
+Versatile artists
+Which artists have had more than 10 art works acquired by Tate, and used a different medium each time? 
+Balka, Alys
+```{r echo=TRUE}
+versatile_artists <- artist_work %>% group_by(artistId)%>%
+  filter(n()>=10, n_distinct(medium)==n()) %>%
+  ungroup() %>% select(artist,medium,year)
+versatile_artists 
+
+```
+Popular artists
+Suppose we use the number of years between creation and acquisition by Tate as an indication of popularity. An artwork by a popular artist would presumably be acquired soon after creation. Follow these steps to identify artists who were popular.
+1. Compute the difference: acquisition year minus year.
+2. Keep only those artists whose first created artwork in the dataset
+is on 1970 or after, and who have 10 or more artworks acquired by
+Tate.
+3. Compute the median difference between acquisition year and cre-
+ation year for each of these artists.
+4. Keep only those for whom this difference is 1 year or less.
+To Explore
+```{r echo= TRUE}
+artist_work %>% 
+  mutate(yr_to_acq = acquisitionYear - year) %>%
+  group_by(artistId) %>%
+  filter(min(year)>=1970, n() >=10) %>%
+  summarise (med1= median (yr_to_acq),.groups="drop")%>%
+  filter(med1 <=1) -> popular_artists
+popular_artists
+
+```
+Having worked with this data for a little under a week, what question of interest would you want to explore about it? Enter your idea here, and we can execute it in a subsequent tutorial. The github link above has some links to ideas that others have tried.
