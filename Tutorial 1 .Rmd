@@ -1,0 +1,65 @@
+---
+title: "Tutorial 1 DSA2101"
+author: "Waseem"
+date: "11/10/2021"
+output: pdf_document
+---
+1. There are missing values in the tables. Inspect the tables carefully and fill them in. The new arrests
+object should be free of NA values.
+```{r echo = TRUE}
+arrests <- readRDS("data/arrests.rds")
+sapply(arrests,function(x) any(is.na(x[[1]])) || any(is.na(x[[2]])))
+
+arrests[['2011']]$age$Female[1] <- 2992 +1125 + 1008
+arrests[['2019']]$age$Male[2] <- 9920 + 3208 + 10465
+
+```
+2. In the DataCamp R markdown course, you learnt about kable from the knitr package. Use it to display the tables for 2019:
+```{r echo = TRUE}
+library(knitr)
+kable(arrests[["2019"]],
+row.names= NA,
+col.names= c('Citizenship status', 'Male', 'Female' ))
+```
+3. Retrieve the citizenship table from 2011 to 2015 inclusive and store it in a list object called qn3_list.
+```{r echo = TRUE}
+qn3_list<-lapply(arrests[1:5],function(x) x$citizenship)
+```
+4. Compute the total number of arrests in each year, and store them in a numeric vector qn4_vec.
+```{r echo = TRUE}
+qn4_vec<- sapply(arrests,function(x) sum( x[[1]][,-1]))
+```
+5. Use qn4_vec to retrieve and store only those years’ data where the total number of arrests was less
+than 18000, but more than 17000. Store them in qn5_list.
+```{r echo = TRUE}
+qn5_list <- arrests[qn4_vec <18000 & 17000 > qn4_vec ]
+
+```
+6. Measure of association I: When we deal with 2x2 tables, one measure of association between the
+variables is the difference in proportions. Write a function prop_diff that takes in one of the data frames and returns the difference between proportion of Males for each row.
+```{r echo = TRUE}
+x<-arrests[[1]][[1]]
+prop_diff<- function(x){
+(x[[2]][[1]]/(x[[2]][[1]]+x[[3]][[1]]))-(x[[2]][[2]]/(x[[2]][[2]]+x[[3]][[2]]))
+
+}
+
+qn6.1_vec <- sapply(arrests,function(y) prop_diff(y[[1]]))
+qn6.2_vec <- sapply(arrests,function(y) prop_diff(y[[2]]))
+qn6_df <- data.frame (qn6.1_vec,qn6.2_vec)
+qn6_df
+
+```
+7. Compute the log-odds ratio for each data.frame and store them in a data.frame called qn7_df, with one row for each year.
+
+```{r echo = TRUE}
+bob <- function (x){
+log(x[[2]][[1]] * x[[3]][[2]]) / ( x[[2]][[2]] * x[[3]][[1]])
+
+}
+qn7.1_vec <- sapply(arrests,function(y) bob(y[[1]]))
+qn7.2_vec <- sapply(arrests,function(y) bob(y[[2]]))
+qn7_df <- data.frame (qn7.1_vec,qn7.2_vec)
+qn7_df
+
+```
